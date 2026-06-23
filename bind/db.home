@@ -1,6 +1,6 @@
 $TTL 3600
 @   IN  SOA ns1.home. admin.home. (
-        2026062301
+        2026062302
         3600
         1800
         604800
@@ -9,3 +9,5 @@ $TTL 3600
 @       IN  NS  ns1.home.
 ns1     IN  A   100.116.210.110
 charles IN  A   100.116.210.110
+chat.charles  IN  A   100.116.210.110
+drive.charles IN  A   100.116.210.110
