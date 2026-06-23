@@ -6,6 +6,7 @@ NGINX_ENABLED="/etc/nginx/sites-enabled"
 CONFIG_DIR="$(dirname "$0")/sites-available"
 BIND_DIR="$(dirname "$0")/bind"
 BIND_TARGET_DIR="/etc/bind"
+TAILSCALE_IP="100.116.210.110"
 
 sudo -v
 
@@ -53,6 +54,13 @@ if [[ -d "$BIND_DIR" ]]; then
 
     echo "Reloading bind9 ..."
     sudo systemctl reload bind9
+fi
+
+if command -v ufw >/dev/null 2>&1; then
+    echo "Applying UFW rules for tailscale-only DNS and HTTP ..."
+    sudo ufw allow in on tailscale0 to "$TAILSCALE_IP" port 53 proto udp
+    sudo ufw allow in on tailscale0 to "$TAILSCALE_IP" port 53 proto tcp
+    sudo ufw allow in on tailscale0 to "$TAILSCALE_IP" port 80 proto tcp
 fi
 
 echo "Done."
