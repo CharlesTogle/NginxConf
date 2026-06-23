@@ -1,0 +1,4 @@
+zone "home" {
+    type master;
+    file "/etc/bind/db.home";
+};

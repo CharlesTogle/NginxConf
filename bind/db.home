@@ -1,0 +1,11 @@
+$TTL 3600
+@   IN  SOA ns1.home. admin.home. (
+        2026062301
+        3600
+        1800
+        604800
+        3600
+)
+@       IN  NS  ns1.home.
+ns1     IN  A   100.116.210.110
+charles IN  A   100.116.210.110
