@@ -7,6 +7,10 @@ CONFIG_DIR="$(dirname "$0")/sites-available"
 BIND_DIR="$(dirname "$0")/bind"
 BIND_TARGET_DIR="/etc/bind"
 TAILSCALE_IP="100.116.210.110"
+TSNET_HOST="charles.auroch-kingsnake.ts.net"
+NGINX_CERT_DIR="/etc/nginx/certs"
+TSNET_CERT_FILE="$NGINX_CERT_DIR/$TSNET_HOST.crt"
+TSNET_KEY_FILE="$NGINX_CERT_DIR/$TSNET_HOST.key"
 
 sudo -v
 
@@ -28,6 +32,15 @@ for conf in "$CONFIG_DIR"/*.conf; do
         echo "  -> already enabled"
     fi
 done
+
+if command -v tailscale >/dev/null 2>&1; then
+    echo "Refreshing Tailscale TLS cert for $TSNET_HOST ..."
+    sudo mkdir -p "$NGINX_CERT_DIR"
+    sudo tailscale cert --cert-file "$TSNET_CERT_FILE" --key-file "$TSNET_KEY_FILE" "$TSNET_HOST"
+else
+    echo "tailscale command not found; cannot provision TLS cert for $TSNET_HOST"
+    exit 1
+fi
 
 echo "Testing nginx config ..."
 sudo nginx -t
@@ -57,10 +70,11 @@ if [[ -d "$BIND_DIR" ]]; then
 fi
 
 if command -v ufw >/dev/null 2>&1; then
-    echo "Applying UFW rules for tailscale-only DNS and HTTP ..."
+    echo "Applying UFW rules for tailscale-only DNS and web access ..."
     sudo ufw allow in on tailscale0 to "$TAILSCALE_IP" port 53 proto udp
     sudo ufw allow in on tailscale0 to "$TAILSCALE_IP" port 53 proto tcp
     sudo ufw allow in on tailscale0 to "$TAILSCALE_IP" port 80 proto tcp
+    sudo ufw allow in on tailscale0 to "$TAILSCALE_IP" port 443 proto tcp
 fi
 
 echo "Done."
