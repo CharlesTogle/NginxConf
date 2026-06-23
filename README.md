@@ -68,6 +68,8 @@ MagicDNS is separate from Split DNS.
 
 You can leave MagicDNS off if you only want your own `*.home` zone.
 
+If you want to use Tailscale Funnel, MagicDNS must be enabled because Funnel only publishes `*.ts.net` names.
+
 ## UFW Ports
 
 These are the ports that mattered:
@@ -130,6 +132,36 @@ What to look for:
 - HTTPS / TLS certificates for tailnet devices
 
 If that feature is disabled or unavailable on the account plan, `tailscale cert` will fail and nginx cannot use Tailscale-issued cert files.
+
+## Tailscale Funnel
+
+Funnel can expose the existing nginx front door to the public internet without exposing the raw app ports directly.
+
+Important constraints for this repo:
+
+- Funnel only publishes `*.ts.net`, not `*.home`
+- Funnel requires MagicDNS to be enabled
+- Funnel only exposes ports `443`, `8443`, or `10000`
+- Funnel's local HTTP reverse proxy target must be `127.0.0.1`
+- Funnel does not expose SSH unless you explicitly configure a TCP forwarder for it
+
+This nginx config is set up so Funnel can target local nginx on port `80`:
+
+```bash
+tailscale funnel --bg --https=443 80
+```
+
+That makes the public routes work at:
+
+- `https://charles.auroch-kingsnake.ts.net/chat/`
+- `https://charles.auroch-kingsnake.ts.net/drive/`
+
+The backend ports stay private:
+
+- chat app stays on `127.0.0.1:4096`
+- drive API stays on `127.0.0.1:3000`
+- nginx remains the public routing layer
+- SSH stays private as long as you do not create a Funnel TCP forwarder for port `22`
 
 ## Turning On HTTPS
 

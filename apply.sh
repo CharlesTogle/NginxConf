@@ -11,6 +11,8 @@ TSNET_HOST="charles.auroch-kingsnake.ts.net"
 NGINX_CERT_DIR="/etc/nginx/certs"
 TSNET_CERT_FILE="$NGINX_CERT_DIR/$TSNET_HOST.crt"
 TSNET_KEY_FILE="$NGINX_CERT_DIR/$TSNET_HOST.key"
+FUNNEL_TARGET_PORT="80"
+FUNNEL_PUBLIC_PORT="443"
 
 sudo -v
 
@@ -47,6 +49,12 @@ sudo nginx -t
 
 echo "Reloading nginx ..."
 sudo systemctl reload nginx
+
+if command -v tailscale >/dev/null 2>&1; then
+    echo "Enabling Tailscale Funnel for HTTPS on $TSNET_HOST ..."
+    sudo tailscale funnel --bg --https="$FUNNEL_PUBLIC_PORT" "$FUNNEL_TARGET_PORT"
+    echo "Funnel now exposes only the nginx web entrypoint, not SSH."
+fi
 
 if [[ -d "$BIND_DIR" ]]; then
     for bind_conf in named.conf.options named.conf.local db.home; do
