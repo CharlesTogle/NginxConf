@@ -35,8 +35,8 @@ done
 echo "Testing nginx config ..."
 sudo nginx -t
 
-echo "Reloading nginx ..."
-sudo systemctl reload nginx
+echo "Starting/reloading nginx ..."
+sudo systemctl restart nginx || sudo systemctl start nginx
 
 if command -v tailscale >/dev/null 2>&1; then
     echo "Enabling Tailscale Funnel for HTTPS on $TSNET_HOST ..."
