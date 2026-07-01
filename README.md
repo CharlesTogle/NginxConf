@@ -28,7 +28,8 @@ At a low level, this setup works like this:
 
 - BIND answers private DNS queries for the `home` zone
 - Tailscale Split DNS sends `*.home` requests to the BIND server at `100.116.210.110`
-- nginx listens on the server's Tailscale IP
+- nginx listens on the server's Tailscale IP on port 80 (plain HTTP)
+- Tailscale Funnel terminates TLS on port 443 and forwards to nginx on port 80
 - nginx routes requests by hostname or path to the right local app
 - UFW allows only the required DNS/HTTP/HTTPS ports on `tailscale0`
 
@@ -36,8 +37,8 @@ This repo now documents a private Tailscale-only setup where:
 
 - `http://chat.charles.home` proxies to `127.0.0.1:4096`
 - `http://drive.charles.home` serves the Drive frontend and proxies `/api/` to `127.0.0.1:3000`
-- `https://charles.auroch-kingsnake.ts.net/chat/` can proxy into `chat.charles.home`
-- `https://charles.auroch-kingsnake.ts.net/drive/` can proxy into `drive.charles.home`
+- `https://charles.auroch-kingsnake.ts.net/chat/` proxies into `chat.charles.home`
+- `https://charles.auroch-kingsnake.ts.net/drive/` proxies into `drive.charles.home`
 
 Note: the correct hostname is `drive.charles.home`, not `charles.drive.home`.
 
@@ -105,33 +106,15 @@ This is wrong as a DNS idea:
 This is the correct model:
 
 - DNS maps `chat.charles.home -> 100.116.210.110`
-- nginx receives the request on `80` or `443`
+- nginx receives the request on port `80`
 - nginx decides whether to proxy to `127.0.0.1:4096` or serve the Drive frontend
+- TLS termination for `*.ts.net` is handled by Tailscale Funnel on port `443`
 
-## Tailscale HTTPS
+For Funnel, the flow is:
 
-We tried using:
-
-```bash
-tailscale cert charles.auroch-kingsnake.ts.net
-```
-
-and hit this error:
-
-- `500 Internal Server Error: your Tailscale account does not support getting TLS certs`
-
-That means `tailscale cert` will not work unless your Tailscale account/tailnet supports HTTPS certificates.
-
-### To make `tailscale cert` work
-
-In the Tailscale admin settings, enable the feature that allows device HTTPS certificates.
-
-What to look for:
-
-- allow users to provision HTTPS certificates for devices
-- HTTPS / TLS certificates for tailnet devices
-
-If that feature is disabled or unavailable on the account plan, `tailscale cert` will fail and nginx cannot use Tailscale-issued cert files.
+- browser -> `https://charles.auroch-kingsnake.ts.net/chat/`
+- Tailscale Funnel (port 443) -> `http://127.0.0.1:80` (nginx)
+- nginx -> `http://127.0.0.1:4096` (chat app)
 
 ## Tailscale Funnel
 
@@ -145,7 +128,7 @@ Important constraints for this repo:
 - Funnel's local HTTP reverse proxy target must be `127.0.0.1`
 - Funnel does not expose SSH unless you explicitly configure a TCP forwarder for it
 
-This nginx config is set up so Funnel can target local nginx on port `80`:
+nginx only listens on port 80. Funnel terminates TLS on port 443 and forwards decrypted HTTP to nginx on port 80:
 
 ```bash
 tailscale funnel --bg --https=443 80
@@ -162,31 +145,6 @@ The backend ports stay private:
 - drive API stays on `127.0.0.1:3000`
 - nginx remains the public routing layer
 - SSH stays private as long as you do not create a Funnel TCP forwarder for port `22`
-
-## Turning On HTTPS
-
-There are three practical paths:
-
-### 1. Tailscale-issued HTTPS
-
-Works only if your tailnet supports cert provisioning.
-
-Then nginx can use cert files for:
-
-- `charles.auroch-kingsnake.ts.net`
-
-### 2. Private CA / self-signed HTTPS
-
-Works for private hostnames like:
-
-- `chat.charles.home`
-- `drive.charles.home`
-
-But every client device must trust your CA/cert.
-
-### 3. Real domain
-
-Best option for clean trusted HTTPS if you want your own subdomains and public CA trust.
 
 ## /drive Hosting Lesson
 
@@ -232,7 +190,8 @@ If `/drive/` breaks, check these first:
 
 - BIND answers `*.home`
 - Tailscale Split DNS sends `home` queries to the BIND server
-- nginx listens on the Tailscale IP
+- nginx listens on the Tailscale IP on port 80
+- Tailscale Funnel handles TLS on port 443, forwards to nginx on port 80
 - UFW allows DNS/HTTP/HTTPS only on `tailscale0`
 - `drive.charles.home` is the source route for the Drive app
-- `charles.auroch-kingsnake.ts.net/drive/` can proxy into that route
+- `charles.auroch-kingsnake.ts.net/drive/` proxies into that route

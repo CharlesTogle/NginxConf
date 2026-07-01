@@ -8,9 +8,6 @@ BIND_DIR="$(dirname "$0")/bind"
 BIND_TARGET_DIR="/etc/bind"
 TAILSCALE_IP="100.116.210.110"
 TSNET_HOST="charles.auroch-kingsnake.ts.net"
-NGINX_CERT_DIR="/etc/nginx/certs"
-TSNET_CERT_FILE="$NGINX_CERT_DIR/$TSNET_HOST.crt"
-TSNET_KEY_FILE="$NGINX_CERT_DIR/$TSNET_HOST.key"
 FUNNEL_TARGET_PORT="80"
 FUNNEL_PUBLIC_PORT="443"
 
@@ -34,15 +31,6 @@ for conf in "$CONFIG_DIR"/*.conf; do
         echo "  -> already enabled"
     fi
 done
-
-if command -v tailscale >/dev/null 2>&1; then
-    echo "Refreshing Tailscale TLS cert for $TSNET_HOST ..."
-    sudo mkdir -p "$NGINX_CERT_DIR"
-    sudo tailscale cert --cert-file "$TSNET_CERT_FILE" --key-file "$TSNET_KEY_FILE" "$TSNET_HOST"
-else
-    echo "tailscale command not found; cannot provision TLS cert for $TSNET_HOST"
-    exit 1
-fi
 
 echo "Testing nginx config ..."
 sudo nginx -t
