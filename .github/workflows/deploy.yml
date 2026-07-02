@@ -30,6 +30,6 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_rsa deploy@100.116.210.110 '
             cd /home/charles/NginxConf &&
-            git pull origin master &&
+            git pull origin main &&
             sudo ./apply.sh
           '
