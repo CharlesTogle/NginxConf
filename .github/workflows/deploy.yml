@@ -1,0 +1,35 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          ping: 100.116.210.110
+
+      - name: Set up SSH key
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan 100.116.210.110 >> ~/.ssh/known_hosts
+
+      - name: Run apply.sh
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_rsa deploy@100.116.210.110 '
+            cd /home/charles/NginxConf &&
+            git pull origin master &&
+            sudo ./apply.sh
+          '
